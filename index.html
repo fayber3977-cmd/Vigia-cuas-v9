@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10243a"><meta name="description" content="VIGÍA C-UAS V9 - observación y registro visual">
+<link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css">
+<title>VIGÍA C-UAS V9</title>
+</head>
+<body>
+<header><div class="brand"><div class="mark">V</div><div><h1>VIGÍA C-UAS</h1><small>VERSIÓN 9 · OBSERVACIÓN</small></div></div><span id="status" class="pill">INICIANDO</span></header>
+<main>
+<section class="hero"><h2>Centro de observación</h2><p>Registra observaciones, ubicación y fotografías. Las alertas de movimiento son experimentales y no identifican drones.</p></section>
+<section class="stats">
+<div class="stat"><b id="eventCount">0</b><span>EVENTOS</span></div>
+<div class="stat"><b id="pointCount">0</b><span>PUNTOS GPS</span></div>
+<div class="stat"><b id="photoCount">0</b><span>FOTOGRAFÍAS</span></div>
+</section>
+<section class="panel"><div class="section-head"><h2>Ubicación y mapa</h2><button id="gpsBtn">Obtener GPS</button></div><p id="coords" class="muted">Ubicación no obtenida.</p><div id="map" aria-label="Mapa de observaciones"><div class="maphint">El mapa requiere conexión a internet. Puedes registrar coordenadas sin conexión.</div></div><button id="savePoint" class="secondary" disabled>Guardar punto de observación</button></section>
+<section class="panel"><div class="section-head"><h2>Cámara y movimiento</h2><span id="motionState" class="pill">INACTIVA</span></div><video id="video" autoplay playsinline muted></video><canvas id="frame" hidden></canvas><div class="actions"><button id="cameraBtn">Activar cámara</button><button id="motionBtn" class="secondary" disabled>Iniciar análisis</button></div><p class="muted">El análisis compara imágenes consecutivas. Cambios de luz, vibración o movimiento pueden generar avisos falsos.</p><div id="motionAlert" class="notice">Análisis detenido.</div><button id="photoBtn" class="secondary" disabled>Tomar fotografía</button></section>
+<section class="panel"><h2>Registrar evento</h2><label for="kind">Tipo de observación</label><select id="kind"><option>Objeto observado</option><option>Movimiento en cámara</option><option>Ruido o sonido observado</option><option>Prueba del sistema</option><option>Otro</option></select><label for="note">Descripción</label><textarea id="note" rows="3" placeholder="Describe lo observado, sin conclusiones no verificadas."></textarea><button id="saveEvent">Guardar evento</button></section>
+<section class="panel"><div class="section-head"><h2>Historial</h2><button id="exportBtn" class="secondary">Exportar JSON</button></div><div id="history" class="history"><p class="muted">Todavía no hay eventos.</p></div><label class="import">Importar copia JSON<input id="importFile" type="file" accept="application/json"></label><p class="muted">Importar reemplaza los registros actuales. Exporta primero una copia si deseas conservarlos.</p></section>
+<section class="panel"><h2>Uso responsable</h2><p class="muted">VIGÍA es una herramienta experimental de observación y documentación. No es un radar, no detecta radiofrecuencias y no confirma la presencia o identidad de aeronaves. No uses sus avisos como única base para tomar decisiones de seguridad.</p></section>
+</main><footer>VIGÍA C-UAS V9 · Datos guardados en este dispositivo</footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="app.js"></script>
+</body></html>

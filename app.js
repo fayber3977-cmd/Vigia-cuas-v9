@@ -1,0 +1,28 @@
+const $=id=>document.getElementById(id);
+const KEY="vigia_v9_data";
+let data={events:[],points:[]},position=null,stream=null,map=null,markerLayer=null,motion=false,lastFrame=null,raf=null;
+try{data=JSON.parse(localStorage.getItem(KEY))||data}catch(e){}
+function persist(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function render(){
+ $("eventCount").textContent=data.events.length;
+ $("pointCount").textContent=data.points.length;
+ $("photoCount").textContent=data.events.filter(x=>x.photo).length;
+ $("history").innerHTML=data.events.length?data.events.slice().reverse().map(e=>`<div class="history-item"><b>${esc(e.kind)} · ${new Date(e.time).toLocaleString()}</b><p>${esc(e.note||"Sin descripción")}</p>${e.lat!=null?`<p>GPS: ${e.lat.toFixed(5)}, ${e.lon.toFixed(5)}</p>`:""}${e.photo?`<img src="${e.photo}" alt="Fotografía registrada">`:""}</div>`).join(""):'<p class="muted">Todavía no hay eventos.</p>';
+ if(map&&markerLayer){markerLayer.clearLayers();data.points.forEach(p=>L.marker([p.lat,p.lon]).addTo(markerLayer).bindPopup(esc(p.name)))}
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function initMap(){if(!window.L)return;map=L.map("map").setView([4.711,-74.0721],11);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);markerLayer=L.layerGroup().addTo(map);render()}
+$("gpsBtn").onclick=()=>{if(!navigator.geolocation){$("coords").textContent="GPS no disponible.";return} $("coords").textContent="Obteniendo ubicación…";navigator.geolocation.getCurrentPosition(p=>{position={lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy};$("coords").textContent=`Latitud ${position.lat.toFixed(6)} · Longitud ${position.lon.toFixed(6)} · Precisión aprox. ${Math.round(position.accuracy)} m`;$("savePoint").disabled=false;if(map)map.setView([position.lat,position.lon],16)},e=>$("coords").textContent="No se pudo obtener GPS: "+e.message,{enableHighAccuracy:true,timeout:15000})};
+$("savePoint").onclick=()=>{if(!position)return;data.points.push({...position,name:"Punto "+(data.points.length+1),time:new Date().toISOString()});persist()};
+$("cameraBtn").onclick=async()=>{if(stream){stopCamera();return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});$("video").srcObject=stream;$("cameraBtn").textContent="Apagar cámara";$("motionBtn").disabled=false;$("photoBtn").disabled=false;$("status").textContent="CÁMARA ACTIVA"}catch(e){$("motionAlert").textContent="No se pudo activar la cámara: "+e.message}};
+function stopCamera(){stopMotion();stream?.getTracks().forEach(t=>t.stop());stream=null;$("video").srcObject=null;$("cameraBtn").textContent="Activar cámara";$("motionBtn").disabled=true;$("photoBtn").disabled=true;$("status").textContent="LISTO"}
+$("photoBtn").onclick=()=>{const v=$("video");if(!v.videoWidth)return;const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);window.pendingPhoto=c.toDataURL("image/jpeg",.72);$("note").value=($("note").value+" [Fotografía adjunta]").trim()};
+$("motionBtn").onclick=()=>motion?stopMotion():startMotion();
+function startMotion(){motion=true;lastFrame=null;$("motionBtn").textContent="Detener análisis";$("motionState").textContent="ANALIZANDO";$("motionAlert").textContent="Analizando cambios de imagen…";analyze()}
+function stopMotion(){motion=false;if(raf)cancelAnimationFrame(raf);raf=null;lastFrame=null;$("motionBtn").textContent="Iniciar análisis";$("motionState").textContent="INACTIVA";$("motionAlert").textContent="Análisis detenido."}
+function analyze(){if(!motion)return;const v=$("video");if(v.readyState>=2){const c=$("frame"),w=64,h=48;c.width=w;c.height=h;const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(v,0,0,w,h);const d=ctx.getImageData(0,0,w,h).data;let changed=0;if(lastFrame){for(let i=0;i<d.length;i+=4){const a=(d[i]+d[i+1]+d[i+2])/3,b=(lastFrame[i]+lastFrame[i+1]+lastFrame[i+2])/3;if(Math.abs(a-b)>35)changed++}}lastFrame=new Uint8ClampedArray(d);const pct=changed/(w*h)*100;if(pct>9)$("motionAlert").textContent=`Cambio visual detectado (${pct.toFixed(1)}%). Aviso experimental; verifica manualmente.`;else $("motionAlert").textContent=`Sin cambio significativo · variación ${pct.toFixed(1)}%.`}raf=requestAnimationFrame(analyze)}
+$("saveEvent").onclick=()=>{const note=$("note").value.trim();const ev={kind:$("kind").value,note,time:new Date().toISOString(),lat:position?.lat??null,lon:position?.lon??null,photo:window.pendingPhoto||null};data.events.push(ev);window.pendingPhoto=null;$("note").value="";persist()};
+$("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="vigia-v9-evidencias.json";a.click();URL.revokeObjectURL(a.href)};
+$("importFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!confirm("Importar reemplazará los registros actuales. ¿Continuar?"))return;try{const x=JSON.parse(await f.text());if(!Array.isArray(x.events)||!Array.isArray(x.points))throw Error("Formato inválido");data=x;persist()}catch(err){alert("No se pudo importar: "+err.message)}e.target.value=""};
+if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+initMap();render();$("status").textContent="LISTO";
